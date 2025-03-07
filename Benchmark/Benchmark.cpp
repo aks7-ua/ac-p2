@@ -4,10 +4,10 @@
 
 using namespace std;
 
-// Tama駉 de la muestra
+// Tama帽o de la muestra
 const int K_SAMPLE_SIZE = 10000;
 
-// Funci髇 que calcula la regresi髇 lineal en C
+// Funci贸n que calcula la regresi贸n lineal en C
 void rectaC(int x[], int y[]) {
 
     double avgX = 0.0, avgY = 0.0, varX = 0.0, covXY = 0.0;
@@ -29,7 +29,7 @@ void rectaC(int x[], int y[]) {
     varX /= (K_SAMPLE_SIZE - 1);
     covXY /= (K_SAMPLE_SIZE - 1);
 
-    // C醠culo de la pendiente y la ordenada en el origen
+    // C谩lculo de la pendiente y la ordenada en el origen
     double m = covXY / varX;
     double b = avgY - (m * avgX);
 
@@ -40,10 +40,10 @@ void rectaC(int x[], int y[]) {
 void rectaEnsamblador(int x[], int y[]) {
     int sumX = 0, sumY = 0, sumXCuadrado = 0, sumXY = 0;
     float mediaX, mediaY, varianzaX, covarianzaXY, m, b;
-    int n_menos_uno = K_SAMPLE_SIZE - 1;  // Para el c醠culo muestral
+    int n_menos_uno = K_SAMPLE_SIZE - 1;  // Para el c谩lculo muestral
 
     __asm {
-        xor esi, esi; Inicializar 韓dice
+        xor esi, esi; Inicializar 铆ndice
         xor eax, eax
         xor ebx, ebx
         xor edx, edx
@@ -119,17 +119,17 @@ void rectaEnsamblador(int x[], int y[]) {
 }
 
 
-// Funci髇 para inicializar datos de prueba
+// Funci贸n para inicializar datos de prueba
 void generarDatos(int* x, int* y, int n) {
     for (int i = 0; i < n; i++) {
         x[i] = rand() % 10;
         y[i] = rand() % 10;
         // x[i] = i;                // Valores predecibles para x
-        // y[i] = 2 * i + 3;        // Simula una relaci髇 lineal (y = 2x + 3)
+        // y[i] = 2 * i + 3;        // Simula una relaci贸n lineal (y = 2x + 3)
     }
 }
 
-// Funci髇 gen閞ica para medir el tiempo de ejecuci髇 de una funci髇
+// Funci贸n gen茅rica para medir el tiempo de ejecuci贸n de una funci贸n
 double medirTiempo(void (*func)(int*, int*), int* x, int* y, int iteraciones) {
     auto inicio = clock();
     for (int i = 0; i < iteraciones; i++) {
@@ -142,7 +142,7 @@ int main() {
     int x[K_SAMPLE_SIZE], y[K_SAMPLE_SIZE];
     srand(time(NULL));
 
-    // Medici髇 de tiempos
+    // Medici贸n de tiempos
     double tiempo_C_5000 = medirTiempo(rectaC, x, y, 5000);
     double tiempo_Asm_5000 = medirTiempo(rectaEnsamblador, x, y, 5000);
     double tiempo_C_15000 = medirTiempo(rectaC, x, y, 15000);
@@ -154,6 +154,23 @@ int main() {
     cout << "Tiempo en Ensamblador (5000 iteraciones): " << tiempo_Asm_5000 << " segundos\n";
     cout << "Tiempo en C (15000 iteraciones): " << tiempo_C_15000 << " segundos\n";
     cout << "Tiempo en Ensamblador (15000 iteraciones): " << tiempo_Asm_15000 << " segundos\n";
+
+    // Main parametrizado para que ejecute 10 veces la regresi贸n
+    // con itereaciones de 5000 en 5000
+    /*int x[K_SAMPLE_SIZE], y[K_SAMPLE_SIZE];
+    srand(time(NULL));
+
+    cout << fixed << setprecision(6);
+
+    for (int i = 1; i <= 10; ++i)
+    {
+        int iteraciones = i * 5000;
+        double tiempo_C = medirTiempo(rectaC, x, y, iteraciones);
+        // double tiempo_Asm = medirTiempo(rectaEnsamblador, x, y, iteraciones);
+
+        cout << "Tiempo en C (" << iteraciones << " iteraciones): " << tiempo_C << " segundos\n";
+        // cout << "Tiempo en Ensamblador (" << iteraciones << " iteraciones): " << tiempo_Asm << " segundos\n";
+    }*/
 
     return 0;
 }
