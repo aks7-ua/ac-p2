@@ -5,11 +5,10 @@
 using namespace std;
 
 // Tamaño de la muestra
-const int K_SAMPLE_SIZE = 10000;
+const int K_SAMPLE_SIZE = 5;
 
 // Función que calcula la regresión lineal en C
 void rectaC(int x[], int y[]) {
-
     double avgX = 0.0, avgY = 0.0, varX = 0.0, covXY = 0.0;
 
     // Calculamos la media de X e Y
@@ -33,14 +32,156 @@ void rectaC(int x[], int y[]) {
     double m = covXY / varX;
     double b = avgY - (m * avgX);
 
-    //cout << "Ecuacion de la recta (C): y = " << m << "x + " << b << endl;
+    cout << "Ecuacion de la recta (C): y = " << m << "x + " << b << endl;
+}
+
+double rectaSSE() {
+	int* coordX = new int[n];
+	int* coordY = new int[n];
+
+	srand(time(NULL));
+	for (int i = 0; i < n; i++) {
+		coordX[i] = rand() % 10;
+		coordY[i] = rand() % 10;
+	}
+
+
+
+	int sumX, sumY, sumXCuadrado, sumXY;
+	sumX = sumY = sumXCuadrado = sumXY = 0;
+
+	float auxiliar, mediaX, mediaY, varianzaX, covarianzaXY, m, b;
+	auxiliar = mediaX = mediaY = varianzaX = covarianzaXY = m = b = 0.0;
+
+	int ultimaIter = n / 4;
+	clock_t inicio = clock();
+	__asm {
+	inicializar:
+		mov ebx, 0;
+		mov edx, 0;
+		mov ecx, 0;
+		mov eax, 0;
+		mov esi, coordX;
+		mov edi, coordY;
+
+	bucle:
+		cmp ecx, ultimaIter;
+		jae terminar;
+
+		//Registro sumX
+		movdqu xmm0, [esi];
+		paddd xmm2, xmm0;
+
+		//Registro sumY
+		movdqu xmm1, [edi];
+		paddd xmm3, xmm1;
+
+		//Registro sumXCuadrado
+		pmulld xmm0, xmm0;
+		paddd xmm4, xmm0;
+
+		movdqu xmm0, [esi]; //REINICILIZAR
+		//Registro sumXY
+		pmulld xmm1, xmm0;
+		paddd xmm5, xmm1;
+
+		add esi, 16;
+		add edi, 16;
+
+		inc ecx;
+		jmp bucle;
+
+	terminar:
+		//sumatorioX
+		phaddd xmm2, xmm2;
+		phaddd xmm2, xmm2;
+		movdqu sumX, xmm2;
+		mov ebx, sumX;
+
+		//sumatorioY
+		phaddd xmm3, xmm3;
+		phaddd xmm3, xmm3;
+		movdqu sumY, xmm3;
+		mov edx, sumY;
+
+		//SumatorioXCuadrado
+		phaddd xmm4, xmm4;
+		phaddd xmm4, xmm4;
+		movdqu sumXCuadrado, xmm4;
+		mov eax, sumXCuadrado;
+
+		//SumatorioXY
+		phaddd xmm5, xmm5;
+		phaddd xmm5, xmm5;
+		movdqu sumXY, xmm5;
+		mov ecx, sumXY;
+
+		mov sumX, ebx;
+		mov sumY, edx;
+		mov sumXCuadrado, eax;
+		mov sumXY, ecx;
+
+		//Coloca un numero entero (que pasa a float) en el tope de la pila
+		fild sumX;
+		//Divide STO (tope pila) pasando a float entre 'n'
+		fidiv n;
+		//Mueve el contenido de STO a una posicion de memoria
+		fstp mediaX;
+
+		fild sumY;
+		fidiv n;
+		fstp mediaY;
+
+		//VARIANZA = (sumXCuadrado / n) - (mediaX*mediaX)
+		fild sumXCuadrado;
+		fidiv n;
+		fstp varianzaX;
+
+		//auxiliar = (mediaX*mediaX)
+		fld mediaX;
+		fmul mediaX;
+		fstp auxiliar;
+
+		fld varianzaX;
+		fsub auxiliar;
+		fstp varianzaX;
+
+		//COVARIANZA = (sumXY / n) - (mediaX*mediaY)
+		fild sumXY;
+		fidiv n;
+		fstp covarianzaXY;
+
+		//auxiliar = (mediaX*mediaY)
+		fld mediaX;
+		fmul mediaY;
+		fstp auxiliar;
+
+		fld covarianzaXY;
+		fsub auxiliar;
+		fstp covarianzaXY;
+
+		//m = covarianzaXY/varianzaX
+		fld covarianzaXY;
+		fdiv varianzaX;
+		fstp m;
+
+		//b = ((covarianzaXY / varianzaX)* (-mediaX)) + mediaY
+		fld b;
+		fsub mediaX;
+		fmul covarianzaXY;
+		fdiv varianzaX;
+		fadd mediaY;
+		fstp b;
+	}
+	clock_t fin = clock();
+
+	return (double(fin - inicio) / ((clock_t)1000));
 }
 
 
 void rectaEnsamblador(int x[], int y[]) {
-    int sumX = 0, sumY = 0, sumXCuadrado = 0, sumXY = 0;
+    float sumX = 0, sumY = 0, sumXCuadrado = 0, sumXY = 0;
     float mediaX, mediaY, varianzaX, covarianzaXY, m, b;
-    int n_menos_uno = K_SAMPLE_SIZE - 1;  // Para el cálculo muestral
 
     __asm {
         xor esi, esi; Inicializar índice
@@ -115,17 +256,16 @@ void rectaEnsamblador(int x[], int y[]) {
             fstp b
     }
 
-    //cout << "Ecuacion de la recta (ASM optimizado): y = " << m << "x + " << b << endl;
+    cout << "Ecuacion de la recta (ASM optimizado): y = " << m << "x + " << b << endl;
 }
-
 
 // Función para inicializar datos de prueba
 void generarDatos(int* x, int* y, int n) {
     for (int i = 0; i < n; i++) {
-        x[i] = rand() % 10;
-        y[i] = rand() % 10;
-        // x[i] = i;                // Valores predecibles para x
-        // y[i] = 2 * i + 3;        // Simula una relación lineal (y = 2x + 3)
+        //x[i] = i;                // Valores predecibles para x
+        //y[i] = 2 * i + 3;        // Simula una relación lineal (y = 2x + 3)
+        x[0] = 1; x[1] = 2; x[2] = 3; x[3] = 4; x[4] = 5;
+        y[0] = 6; y[1] = 7; y[2] = 9; y[3] = 11; y[4] = 13;
     }
 }
 
@@ -140,20 +280,26 @@ double medirTiempo(void (*func)(int*, int*), int* x, int* y, int iteraciones) {
 
 int main() {
     int x[K_SAMPLE_SIZE], y[K_SAMPLE_SIZE];
+
+    generarDatos(x, y, K_SAMPLE_SIZE);
+    /*
     srand(time(NULL));
 
+    // Inicialización de los datos
+    generarDatos(x, y, K_SAMPLE_SIZE);
+
     // Medición de tiempos
-    double tiempo_C_5000 = medirTiempo(rectaC, x, y, 5000);
+    // double tiempo_C_5000 = medirTiempo(rectaC, x, y, 5000);
     double tiempo_Asm_5000 = medirTiempo(rectaEnsamblador, x, y, 5000);
-    double tiempo_C_15000 = medirTiempo(rectaC, x, y, 15000);
+    // double tiempo_C_15000 = medirTiempo(rectaC, x, y, 15000);
     double tiempo_Asm_15000 = medirTiempo(rectaEnsamblador, x, y, 15000);
 
     // Mostrar resultados
     cout << fixed << setprecision(6);
-    cout << "Tiempo en C (5000 iteraciones): " << tiempo_C_5000 << " segundos\n";
+    // cout << "Tiempo en C (5000 iteraciones): " << tiempo_C_5000 << " segundos\n";
     cout << "Tiempo en Ensamblador (5000 iteraciones): " << tiempo_Asm_5000 << " segundos\n";
-    cout << "Tiempo en C (15000 iteraciones): " << tiempo_C_15000 << " segundos\n";
+    // cout << "Tiempo en C (15000 iteraciones): " << tiempo_C_15000 << " segundos\n";
     cout << "Tiempo en Ensamblador (15000 iteraciones): " << tiempo_Asm_15000 << " segundos\n";
-
+    */
     return 0;
 }
